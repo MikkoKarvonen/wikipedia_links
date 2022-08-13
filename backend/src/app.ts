@@ -53,13 +53,15 @@ app.get('/', (req: Request, res: Response) => {
 app.get('/api/links', async (req: Request, res: Response) => {
     const reqBody: QueryParams = req.body;
     const links: RequestLinks[] = [];
-    await getRequest(
-        reqBody.query,
-        reqBody.height,
-        reqBody.depth,
-        reqBody.depth,
-        links
-    );
+    if (reqBody.query.length > 0 && reqBody.height < 5 && reqBody.depth < 5) {
+        await getRequest(
+            reqBody.query,
+            reqBody.height,
+            reqBody.depth,
+            reqBody.depth,
+            links
+        );
+    }
     res.send(links);
 });
 
