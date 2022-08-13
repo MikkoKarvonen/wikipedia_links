@@ -1,20 +1,66 @@
 import express, { Application, Request, Response } from 'express';
 import bodyParser from 'body-parser';
+import axios from 'axios';
 
-import { QueryParams } from './types/types';
+import { QueryParams, RequestLinks } from './types/types';
 
 const app: Application = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+const getRequest = async (
+    query: string,
+    height: number,
+    depth: number,
+    rDepth: number,
+    rLinks: RequestLinks[]
+) => {
+    try {
+        const response = await axios.get(
+            `https://en.wikipedia.org/w/api.php?action=parse&page=${query}&format=json`
+        );
+        const wiki = response.data;
+        const regex =
+            /href="\/wiki\/(?!(File:|([^"]*)_\(disambiguation\)))([^"]*)"/g;
+        const result = wiki.parse.text['*'].match(regex);
+
+        for (let i = 0; i < height; i++) {
+            const link = result[i].replace(`href="/wiki/`, '').slice(0, -1);
+            rLinks.push({
+                link,
+                subLinks: [],
+            });
+            if (rDepth - 1 > 0) {
+                await getRequest(
+                    link,
+                    height,
+                    depth,
+                    rDepth - 1,
+                    rLinks[rLinks.length - 1].subLinks
+                );
+            }
+        }
+    } catch (err) {
+        console.error(err);
+    }
+};
+
 app.get('/', (req: Request, res: Response) => {
     res.send('Hello World');
 });
 
-app.get('/api/links', (req: Request, res: Response) => {
+app.get('/api/links', async (req: Request, res: Response) => {
     const reqBody: QueryParams = req.body;
-    res.send(reqBody);
+    const links: RequestLinks[] = [];
+    await getRequest(
+        reqBody.query,
+        reqBody.height,
+        reqBody.depth,
+        reqBody.depth,
+        links
+    );
+    res.send(links);
 });
 
 const PORT = process.env.PORT || 3001;

@@ -3,3 +3,8 @@ export type QueryParams = {
     height: number;
     depth: number;
 };
+
+export type RequestLinks = {
+    link: string;
+    subLinks: Array<RequestLinks>;
+};
